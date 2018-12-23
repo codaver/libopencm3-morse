@@ -220,10 +220,7 @@ int main(void)
                 printf("Empty message\n");
             }
             else {
-                // printf("%d\n", msg);
-                for(int i = 7; i >= 0; --i)
-                    printf("%d", ((msg >> i) & 1));
-                printf("\n");
+                printf("%c\n", msg);
             }
             TIM_CNT(TIM7)=0;
             counter = 0;
