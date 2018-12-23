@@ -1,7 +1,10 @@
 import sys
 import serial
 import re
-port = serial.Serial('/dev/ttyUSB0', 115200)
+
+device = '/dev/ttyUSB0' # Change this to your UART-USB connector port.
+
+port = serial.Serial(device, 115200)
 
 MORSE_CODE_DICT = { '01':'A', '1000':'B', 
                     '1010':'C', '100':'D', '0':'E', 
@@ -16,20 +19,26 @@ MORSE_CODE_DICT = { '01':'A', '1000':'B',
                     '00001':'4', '00000':'5', '10000':'6', 
                     '11000':'7', '11100':'8', '11110':'9', 
                     '11111':'0'} 
+# You can add more codes if you want. Dot't forget to change max length in morse.c
 
 def decode(line):
     line = line[line.index('1')+1:]
-    return MORSE_CODE_DICT[line]
+    if line in MORSE_CODE_DICT.keys():
+        return MORSE_CODE_DICT[line]
+    else:
+        return "Unknown code"
 
 while True:
     line = port.readline()
     line = line[:-2]
     if re.match(r"0{7}1", line):
+        # Empty message
         pass
     elif re.match(r"[01]{8}", line):
+        # Morse code
         symbol=decode(line)
         print symbol
     else:
+        # System messages
         print line
-    # elif line == 'Too much symbols':
-    #     print line
+

@@ -26,7 +26,7 @@
 
 int counter = 0;
 bool send = false;
-char msg = 1; 
+char msg = 1;
 
 static void delay(int t)
 {
@@ -87,6 +87,9 @@ static void gpio_setup(void)
     gpio_set_af(GPIOA, GPIO_AF7, GPIO2);
 }
 
+/*
+ * 1 ms timer.
+ */
 static void setup_tim6(void)
 {
     rcc_periph_reset_pulse(RST_TIM6);
@@ -116,29 +119,30 @@ void BUTTON_DISCO_USER_isr(void)
 {
     exti_reset_request(BUTTON_DISCO_USER_EXTI);
     if (state.falling) {
+        // Button released
         gpio_clear(LED_DISCO_BLUE_PORT, LED_DISCO_BLUE_PIN);
         state.falling = false;
         exti_set_trigger(BUTTON_DISCO_USER_EXTI, EXTI_TRIGGER_RISING);
         unsigned int x = TIM_CNT(TIM7);
         counter++;
-        if ((counter > 5) && (!send)){
+        if ((counter > 5) && (!send)) { // Change max message length
             printf("Too much symbols\n");
             msg = 1;
             counter = 0;
             send = false;
-        }else{
-            if (x>tick){
-                msg = (msg<<1) | 1; //| (1 << counter);// printf("-");// bar
+        } else {
+            if (x>tick) {
+                msg = (msg<<1) | 1; // bar
             }
-            else{
-                msg = (msg<<1) | 0;//& (0 << counter);// printf("*");//dot
+            else {
+                msg = (msg<<1) | 0; //dot
             }
         }
         state.pressed = false;
         // printf("held: %u ms\n", x);
     } else {
+        // Pushed down
         gpio_set(LED_DISCO_BLUE_PORT, LED_DISCO_BLUE_PIN);
-        // printf("Pushed down!\n");
         TIM_CNT(TIM7) = 0;
         state.falling = true;
         state.pressed = true;
@@ -152,7 +156,7 @@ static void setup_buttons(void)
     nvic_enable_irq(BUTTON_DISCO_USER_NVIC);
 
     gpio_mode_setup(BUTTON_DISCO_USER_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE,
-            BUTTON_DISCO_USER_PIN);
+                    BUTTON_DISCO_USER_PIN);
 
     /* Configure the EXTI subsystem. */
     exti_select_source(BUTTON_DISCO_USER_EXTI, BUTTON_DISCO_USER_PORT);
@@ -168,7 +172,7 @@ void tim6_isr(void)
 {
     TIM_SR(TIM6) &= ~TIM_SR_UIF;
     if (t6ovf++ > 1000) {
-        // printf("TICK %d\n", state.tickcount++);
+        // Every second do this
         t6ovf = 0;
         gpio_toggle(LED_DISCO_GREEN_PORT, LED_DISCO_GREEN_PIN);
     }
@@ -210,12 +214,12 @@ int main(void)
 
     while (1) {
         unsigned int x = TIM_CNT(TIM7);
-        if( (!state.pressed) && (x>5000) ){
+        if( (!state.pressed) && (x>5000) ) {
             printf("Message sent\n");
-            if (msg == 1){
+            if (msg == 1) {
                 printf("Empty message\n");
             }
-            else{
+            else {
                 // printf("%d\n", msg);
                 for(int i = 7; i >= 0; --i)
                     printf("%d", ((msg >> i) & 1));
