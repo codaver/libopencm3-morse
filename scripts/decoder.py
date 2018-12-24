@@ -1,44 +1,56 @@
-import sys
-import serial
-import re
+from sys import *
+from serial import *
+from re import *
 
-device = '/dev/ttyUSB0' # Change this to your UART-USB connector port.
+device = '/dev/cu.usbserial' # Change this to your UART-USB connector port.
 
-port = serial.Serial(device, 115200)
+port = Serial(device, 115200)
 
-MORSE_CODE_DICT = { '01':'A', '1000':'B', 
-                    '1010':'C', '100':'D', '0':'E', 
-                    '0010':'F', '110':'G', '0000':'H', 
-                    '00':'I', '0111':'J', '101':'K', 
-                    '0100':'L', '11':'M', '10':'N', 
-                    '111':'O', '0110':'P', '1101':'Q', 
-                    '010':'R', '000':'S', '1':'T', 
-                    '001':'U', '0001':'V', '011':'W', 
-                    '1001':'X', '1011':'Y', '1100':'Z', 
-                    '01111':'1', '00111':'2', '00011':'3', 
-                    '00001':'4', '00000':'5', '10000':'6', 
-                    '11000':'7', '11100':'8', '11110':'9', 
-                    '11111':'0'} 
-# You can add more codes if you want. Dot't forget to change max length in morse.c
+MORSE_CODE_DICT = { 
+    int('101'   , 2) : 'A',
+    int('11000' , 2) : 'B',
+    int('11010' , 2) : 'C',
+    int('1100'  , 2) : 'D',
+    int('10'    , 2) : 'E',
+    int('10010' , 2) : 'F',
+    int('1110'  , 2) : 'G',
+    int('10000' , 2) : 'H',
+    int('100'   , 2) : 'I',
+    int('10111' , 2) : 'J',
+    int('1101'  , 2) : 'K',
+    int('10100' , 2) : 'L',
+    int('111'   , 2) : 'M',
+    int('110'   , 2) : 'N',
+    int('1111'  , 2) : 'O',
+    int('10110' , 2) : 'P',
+    int('11101' , 2) : 'Q',
+    int('1010'  , 2) : 'R',
+    int('1000'  , 2) : 'S',
+    int('11'    , 2) : 'T',
+    int('1001'  , 2) : 'U',
+    int('10001' , 2) : 'V',
+    int('1011'  , 2) : 'W',
+    int('11001' , 2) : 'X',
+    int('11011' , 2) : 'Y',
+    int('11100' , 2) : 'Z',
+    int('101111', 2) : '1',
+    int('100111', 2) : '2',
+    int('100011', 2) : '3',
+    int('100001', 2) : '4',
+    int('100000', 2) : '5',
+    int('110000', 2) : '6',
+    int('111000', 2) : '7',
+    int('111100', 2) : '8',
+    int('111110', 2) : '9',
+    int('111111', 2) : '0',
+}
 
-def decode(line):
-    line = line[line.index('1')+1:]
-    if line in MORSE_CODE_DICT.keys():
-        return MORSE_CODE_DICT[line]
-    else:
-        return "Unknown code"
 
 while True:
-    line = port.readline()
-    line = line[:-2]
-    if re.match(r"0{7}1", line):
-        # Empty message
-        pass
-    elif re.match(r"[01]{8}", line):
-        # Morse code
-        symbol=decode(line)
-        print symbol
+    line = port.readline().rstrip()
+    if len(line) > 1:
+        print(line.decode('ascii'))
     else:
-        # System messages
-        print line
+        result = int.from_bytes(line, byteorder='little')
+        print(MORSE_CODE_DICT[result])
 
