@@ -55,6 +55,7 @@ static void clock_setup(void)
     rcc_periph_clock_enable(RCC_USART2);
 
     /* And timers. */
+    rcc_periph_clock_enable(RCC_TIM6);
     rcc_periph_clock_enable(RCC_TIM7);
 }
 
@@ -86,6 +87,26 @@ static void gpio_setup(void)
     gpio_set_af(GPIOA, GPIO_AF7, GPIO2);
 }
 
+/*
+ * 1 ms timer.
+ */
+static void setup_tim6(void)
+{
+    rcc_periph_reset_pulse(RST_TIM6);
+    /* 24Mhz / 10khz -1. */
+    timer_set_prescaler(TIM6, 2399); /* 24Mhz/10000hz - 1 */
+    /* 10khz for 10 ticks = 1 khz overflow = 1ms overflow interrupts */
+    timer_set_period(TIM6, 10);
+
+    nvic_enable_irq(NVIC_TIM6_IRQ);
+    timer_enable_update_event(TIM6); /* default at reset! */
+    timer_enable_irq(TIM6, TIM_DIER_UIE);
+    timer_enable_counter(TIM6);
+}
+
+/*
+ * Free running ms timer.
+ */
 static void setup_tim7(void)
 {
     rcc_periph_reset_pulse(RST_TIM7);
@@ -110,7 +131,10 @@ void BUTTON_DISCO_USER_isr(void)
             counter = 0;
             send = false;
         } else {
-            if (x>tick) {
+            if (x<10) {
+                continue; // Avoid phantom presses
+            }
+            else if (x>tick) {
                 msg = (msg<<1) | 1; // bar
             }
             else {
@@ -147,6 +171,16 @@ static void setup_buttons(void)
 
 static volatile int t6ovf;
 
+void tim6_isr(void)
+{
+    TIM_SR(TIM6) &= ~TIM_SR_UIF;
+    if (t6ovf++ > 1000) {
+        // Every second do this
+        t6ovf = 0;
+        gpio_toggle(LED_DISCO_GREEN_PORT, LED_DISCO_GREEN_PIN);
+    }
+}
+
 int _write(int file, char *ptr, int len)
 {
     int i;
@@ -170,11 +204,13 @@ static void greetings(void) {
     printf("Setup complete!\n");
 }
 
-int main(void) {
+int main(void)
+{
     clock_setup();
     gpio_setup();
     usart_setup();
     setup_buttons();
+    setup_tim6();
     setup_tim7();
 
     greetings();
@@ -182,10 +218,16 @@ int main(void) {
     while (1) {
         unsigned int x = TIM_CNT(TIM7);
         if( (!state.pressed) && (x>5000) ) {
-            gpio_toggle(GPIOB, GPIO7);
-            delay(300000);
-            gpio_toggle(GPIOB, GPIO7);
-            printf("%c\n", msg);
+            printf("Message sent\n");
+            if (msg == 1) {
+                printf("Empty message\n");
+            }
+            else {
+                // printf("%d\n", msg);
+                for(int i = 7; i >= 0; --i)
+                    printf("%d", ((msg >> i) & 1));
+                printf("\n");
+            }
             TIM_CNT(TIM7)=0;
             counter = 0;
             msg = 1;
