@@ -111,7 +111,7 @@ void BUTTON_DISCO_USER_isr(void)
             send = false;
         } else {
             if (x<10) {
-                continue; // Avoid phantom presses
+                ; // Avoid phantom presses
             }
             else if (x>tick) {
                 msg = (msg<<1) | 1; // bar
